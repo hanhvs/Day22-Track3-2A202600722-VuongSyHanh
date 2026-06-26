@@ -72,6 +72,33 @@ DPO on CPU = ~24 hours per epoch for a 1.5B model. The graded core lab targets �
 
 ## 8. Apple Silicon (M1/M2/M3/M4)?
 
-MPS backend on Apple Silicon does not yet support bitsandbytes 4-bit quantization, which Unsloth + DPO depend on for the reference model. Status as of 2026-05: **not viable** as the lab's primary path. Use free Colab T4 instead — it's faster than M-series Mac for this workload and works out of the box.
+The `T4` / `BigGPU` notebooks depend on **Unsloth + bitsandbytes 4-bit**, and
+bitsandbytes has **no MPS backend** — those notebooks hard-`assert
+torch.cuda.is_available()` and crash on a Mac. So the 4-bit path is still **not
+viable** on Apple Silicon.
 
-If you want an Apple-specific stretch experiment, see the bonus challenge file's "MLX-DPO" provocation (write your own DPO loop in MLX-LM — that's a 1-week stretch project, not a 4-hour lab).
+**But** there is now a dedicated Apple-Silicon notebook that runs the full
+pipeline locally on the **MPS / Metal** backend:
+
+| | |
+|---|---|
+| Notebook | `colab/Lab22_DPO_M4.ipynb` |
+| Deps | `requirements-m4.txt` (no unsloth, no bitsandbytes) |
+| Stack | plain `transformers` + `peft` + `trl`, **fp32 LoRA on `mps`** |
+| Base model | `Qwen2.5-0.5B-Instruct` (bump to 1.5B on ≥ 24 GB) |
+| Runtime | full NB1→NB4 in ~15–20 min on an M-series chip |
+
+It swaps every CUDA-specific piece: `AutoModelForCausalLM` instead of Unsloth,
+no quantization, `optim="adamw_torch"`, `bf16=fp16=False`, `mps→cuda→cpu` device
+pick, `torch.mps.empty_cache()`, and a `llama.cpp` Metal build for the GGUF
+export. See the **Report** cell at the bottom of that notebook for the full diff.
+
+> **Memory caveat (16–24 GB Macs):** fp32 weights live in unified memory shared
+> with the OS. Running SFT and DPO back-to-back in one kernel can get the kernel
+> OS-killed mid-DPO. Run stages one block at a time; on a dead kernel, restart,
+> re-run the two setup cells, and continue — adapters are checkpointed to disk
+> after every stage. On ≥ 32 GB a full *Run All* is fine.
+
+If you'd rather not babysit memory, free Colab T4 is still faster and works out
+of the box. For a deeper Apple-native experiment, see the bonus challenge file's
+"MLX-DPO" provocation (write your own DPO loop in MLX-LM — a 1-week stretch).

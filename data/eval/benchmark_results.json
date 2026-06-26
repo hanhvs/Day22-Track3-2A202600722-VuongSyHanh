@@ -1,0 +1,15 @@
+{
+  "compute_tier": "M4",
+  "device": "mps",
+  "base_model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "n_eval_pairs": 30,
+  "metrics": {
+    "preference_accuracy": {
+      "sft": 0.5333333333333333,
+      "dpo": 0.5333333333333333
+    }
+  },
+  "deltas": {
+    "preference_accuracy": 0.0
+  }
+}
